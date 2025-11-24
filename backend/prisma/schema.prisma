@@ -1,0 +1,209 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart      Cart?
+  orders    Order[]
+  reviews   Review[]
+  addresses Address[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  slug        String   @unique
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  gifts Gift[]
+
+  @@map("categories")
+}
+
+model Gift {
+  id                  String   @id @default(cuid())
+  name                String
+  description         String
+  price               Float
+  stock               Int      @default(0)
+  categoryId          String
+  isCustomizable      Boolean  @default(false)
+  allowPersonalMsg    Boolean  @default(true)
+  allowAddons         Boolean  @default(true)
+  allowImageUpload    Boolean  @default(false)
+  addonsOptions       String[] // JSON array of addon options
+  featured            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  images      GiftImage[]
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  reviews     Review[]
+
+  @@index([categoryId])
+  @@index([featured])
+  @@map("gifts")
+}
+
+model GiftImage {
+  id        String   @id @default(cuid())
+  giftId    String
+  url       String
+  publicId  String   // Cloudinary public ID for deletion
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@index([giftId])
+  @@map("gift_images")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  giftId    String
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, giftId]) // One review per user per gift
+  @@index([giftId])
+  @@map("reviews")
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id               String   @id @default(cuid())
+  cartId           String
+  giftId           String
+  quantity         Int      @default(1)
+  personalMessage  String?
+  selectedAddons   String[] // JSON array of selected addons
+  deliveryDate     DateTime?
+  customImageUrl   String?  // Cloudinary URL if user uploads image
+  customImageId    String?  // Cloudinary public ID
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([giftId])
+  @@map("cart_items")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  addressId       String
+  status          OrderStatus @default(PENDING)
+  subtotal        Float
+  tax             Float       @default(0)
+  deliveryCharge  Float       @default(0)
+  total           Float
+  paymentIntentId String?     // Stripe payment intent ID
+  paymentStatus   String      @default("pending")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address Address     @relation(fields: [addressId], references: [id])
+  items   OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  giftId          String
+  quantity        Int
+  price           Float    // Price at time of order
+  personalMessage String?
+  selectedAddons  String[] // JSON array
+  deliveryDate    DateTime?
+  customImageUrl  String?
+  createdAt       DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  gift  Gift  @relation(fields: [giftId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  fullName    String
+  phone       String
+  addressLine String
+  city        String
+  state       String
+  zipCode     String
+  country     String   @default("Nepal")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId])
+  @@map("addresses")
+}
