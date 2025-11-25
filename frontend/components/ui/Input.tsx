@@ -1,39 +1,52 @@
-import { InputHTMLAttributes, forwardRef } from 'react';
-import { cn } from '@/lib/utils';
+"use client"
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-    label?: string;
-    error?: string;
-    fullWidth?: boolean;
+import * as React from "react"
+import { cn } from "@/lib/utils"
+import { Label } from "./label"
+
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string
+  error?: string
+  fullWidth?: boolean
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(
-    ({ className, label, error, fullWidth = true, type = 'text', ...props }, ref) => {
-        return (
-            <div className={cn('flex flex-col gap-1.5', fullWidth ? 'w-full' : '')}>
-                {label && (
-                    <label className="text-sm font-medium text-neutral-700">
-                        {label}
-                    </label>
-                )}
-                <input
-                    ref={ref}
-                    type={type}
-                    className={cn(
-                        'px-3 py-2 rounded-lg border border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:bg-neutral-50',
-                        error ? 'border-red-500 focus:ring-red-500' : '',
-                        className
-                    )}
-                    {...props}
-                />
-                {error && (
-                    <span className="text-sm text-red-500">{error}</span>
-                )}
-            </div>
-        );
+const inputBase =
+  "flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  (
+    { className, label, error, fullWidth = true, type = "text", ...props },
+    ref
+  ) => {
+    const control = (
+      <input
+        ref={ref}
+        type={type}
+        className={cn(
+          inputBase,
+          fullWidth && "w-full",
+          error && "border-destructive focus-visible:ring-destructive",
+          className
+        )}
+        {...props}
+      />
+    )
+
+    if (!label && !error) {
+      return control
     }
-);
 
-Input.displayName = 'Input';
+    return (
+      <div className={cn("space-y-2", fullWidth && "w-full")}>
+        {label && <Label htmlFor={props.id}>{label}</Label>}
+        {control}
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+    )
+  }
+)
+Input.displayName = "Input"
 
-export default Input;
+export { Input }
+export default Input

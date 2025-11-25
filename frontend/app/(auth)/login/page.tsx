@@ -8,6 +8,12 @@ import { useMutation } from '@tanstack/react-query';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
+import Card, {
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
@@ -48,58 +54,60 @@ export default function LoginPage() {
             <Navbar />
 
             <main className="flex-grow flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="text-center">
-                        <h2 className="mt-6 text-3xl font-bold text-gray-900 font-playfair">
-                            Welcome Back
-                        </h2>
-                        <p className="mt-2 text-sm text-gray-600">
+                <Card className="max-w-md w-full space-y-6">
+                    <CardHeader className="space-y-2 text-center">
+                        <CardTitle className="text-3xl">Welcome Back</CardTitle>
+                        <CardDescription>
                             Sign in to your account to continue
-                        </p>
-                    </div>
+                        </CardDescription>
+                    </CardHeader>
 
-                    <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-                        <div className="space-y-4">
-                            <Input
-                                label="Email Address"
-                                type="email"
-                                autoComplete="email"
-                                {...register('email', { required: 'Email is required' })}
-                                error={errors.email?.message}
-                            />
+                    <CardContent className="space-y-6">
+                        <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+                            <div className="space-y-4">
+                                <Input
+                                    id="email"
+                                    label="Email Address"
+                                    type="email"
+                                    autoComplete="email"
+                                    {...register('email', { required: 'Email is required' })}
+                                    error={errors.email?.message}
+                                />
 
-                            <Input
-                                label="Password"
-                                type="password"
-                                autoComplete="current-password"
-                                {...register('password', { required: 'Password is required' })}
-                                error={errors.password?.message}
-                            />
-                        </div>
-
-                        {error && (
-                            <div className="text-sm text-error text-center bg-error/10 py-2 rounded-lg">
-                                {error}
+                                <Input
+                                    id="password"
+                                    label="Password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    {...register('password', { required: 'Password is required' })}
+                                    error={errors.password?.message}
+                                />
                             </div>
-                        )}
 
-                        <Button
-                            type="submit"
-                            fullWidth
-                            size="lg"
-                            isLoading={loginMutation.isPending}
-                        >
-                            Sign In
-                        </Button>
+                            {error && (
+                                <div className="text-sm text-destructive text-center bg-destructive/10 py-2 rounded-lg">
+                                    {error}
+                                </div>
+                            )}
 
-                        <div className="text-center text-sm">
-                            <span className="text-gray-600">Don't have an account? </span>
-                            <Link href="/register" className="font-medium text-primary hover:text-primary-dark">
-                                Sign up
-                            </Link>
-                        </div>
-                    </form>
-                </div>
+                            <Button
+                                type="submit"
+                                fullWidth
+                                size="lg"
+                                isLoading={loginMutation.isPending}
+                            >
+                                Sign In
+                            </Button>
+
+                            <div className="text-center text-sm">
+                                <span className="text-gray-600">Don't have an account? </span>
+                                <Link href="/register" className="font-medium text-primary hover:text-primary-dark">
+                                    Sign up
+                                </Link>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
             </main>
 
             <Footer />
