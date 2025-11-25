@@ -15,7 +15,6 @@ export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // Handle scroll effect
     useEffect(() => {
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 10);
@@ -34,29 +33,29 @@ export default function Navbar() {
     return (
         <header
             className={cn(
-                'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-                isScrolled ? 'bg-white/80 backdrop-blur-md shadow-sm py-3' : 'bg-transparent py-5'
+                'sticky top-0 z-50 w-full border-b bg-white transition-shadow',
+                isScrolled ? 'shadow-sm' : ''
             )}
         >
-            <div className="container-custom flex items-center justify-between">
+            <div className="container-custom flex h-16 items-center justify-between">
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 group">
-                    <span className="text-2xl font-bold font-playfair gradient-text">
+                <Link href="/" className="flex items-center gap-2">
+                    <span className="text-xl font-bold font-playfair text-neutral-900">
                         Surprise Gifting
                     </span>
                 </Link>
 
                 {/* Desktop Navigation */}
-                <nav className="hidden md:flex items-center gap-8">
+                <nav className="hidden md:flex items-center gap-6">
                     {navLinks.map((link) => (
                         <Link
                             key={link.href}
                             href={link.href}
                             className={cn(
-                                'text-sm font-medium transition-colors hover:text-primary',
+                                'text-sm font-medium transition-colors',
                                 pathname === link.href
-                                    ? 'text-primary'
-                                    : 'text-gray-600'
+                                    ? 'text-neutral-900'
+                                    : 'text-neutral-600 hover:text-neutral-900'
                             )}
                         >
                             {link.label}
@@ -66,9 +65,8 @@ export default function Navbar() {
 
                 {/* Actions */}
                 <div className="hidden md:flex items-center gap-4">
-                    {/* Cart Icon */}
                     {!isAdmin && (
-                        <Link href="/cart" className="relative p-2 text-gray-600 hover:text-primary transition-colors">
+                        <Link href="/cart" className="relative p-2 text-neutral-600 hover:text-neutral-900">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
@@ -80,21 +78,20 @@ export default function Navbar() {
                                 <path
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 5c.07.286.074.58.012.865a2.25 2.25 0 01-2.142 1.828H6.758a2.25 2.25 0 01-2.142-1.828l1.263-5a2.25 2.25 0 012.142-1.672h7.372a2.25 2.25 0 012.142 1.672z"
+                                    d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
                                 />
                             </svg>
                             {itemCount > 0 && (
-                                <span className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white animate-pulse">
+                                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-bold text-white">
                                     {itemCount}
                                 </span>
                             )}
                         </Link>
                     )}
 
-                    {/* Auth Buttons */}
                     {isAuthenticated ? (
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm font-medium text-gray-700">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-neutral-700">
                                 Hi, {user?.name.split(' ')[0]}
                             </span>
                             <Button variant="outline" size="sm" onClick={logout}>
@@ -104,14 +101,10 @@ export default function Navbar() {
                     ) : (
                         <div className="flex items-center gap-2">
                             <Link href="/login">
-                                <Button variant="ghost" size="sm">
-                                    Login
-                                </Button>
+                                <Button variant="ghost" size="sm">Login</Button>
                             </Link>
                             <Link href="/register">
-                                <Button variant="primary" size="sm">
-                                    Sign Up
-                                </Button>
+                                <Button size="sm">Sign Up</Button>
                             </Link>
                         </div>
                     )}
@@ -119,14 +112,14 @@ export default function Navbar() {
 
                 {/* Mobile Menu Button */}
                 <button
-                    className="md:hidden p-2 text-gray-600"
+                    className="md:hidden p-2 text-neutral-600"
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
-                        strokeWidth={1.5}
+                        strokeWidth={2}
                         stroke="currentColor"
                         className="w-6 h-6"
                     >
@@ -141,47 +134,49 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-100 shadow-lg p-4 flex flex-col gap-4 animate-slide-in">
-                    {navLinks.map((link) => (
-                        <Link
-                            key={link.href}
-                            href={link.href}
-                            className={cn(
-                                'text-sm font-medium py-2',
-                                pathname === link.href ? 'text-primary' : 'text-gray-600'
-                            )}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            {link.label}
-                        </Link>
-                    ))}
-                    <hr className="border-gray-100" />
-                    {!isAdmin && (
-                        <Link
-                            href="/cart"
-                            className="flex items-center justify-between text-sm font-medium text-gray-600 py-2"
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            Cart
-                            <span className="bg-primary text-white text-xs px-2 py-0.5 rounded-full">
-                                {itemCount}
-                            </span>
-                        </Link>
-                    )}
-                    {isAuthenticated ? (
-                        <Button variant="outline" fullWidth onClick={() => { logout(); setIsMobileMenuOpen(false); }}>
-                            Logout
-                        </Button>
-                    ) : (
-                        <div className="flex flex-col gap-2">
-                            <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                                <Button variant="ghost" fullWidth>Login</Button>
+                <div className="md:hidden border-t bg-white">
+                    <div className="container-custom py-4 flex flex-col gap-4">
+                        {navLinks.map((link) => (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                className={cn(
+                                    'text-sm font-medium py-2',
+                                    pathname === link.href ? 'text-neutral-900' : 'text-neutral-600'
+                                )}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                {link.label}
                             </Link>
-                            <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
-                                <Button variant="primary" fullWidth>Sign Up</Button>
+                        ))}
+                        <hr className="border-neutral-200" />
+                        {!isAdmin && (
+                            <Link
+                                href="/cart"
+                                className="flex items-center justify-between text-sm font-medium text-neutral-700 py-2"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                Cart
+                                <span className="bg-neutral-900 text-white text-xs px-2 py-0.5 rounded-full">
+                                    {itemCount}
+                                </span>
                             </Link>
-                        </div>
-                    )}
+                        )}
+                        {isAuthenticated ? (
+                            <Button variant="outline" fullWidth onClick={() => { logout(); setIsMobileMenuOpen(false); }}>
+                                Logout
+                            </Button>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                                    <Button variant="ghost" fullWidth>Login</Button>
+                                </Link>
+                                <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
+                                    <Button fullWidth>Sign Up</Button>
+                                </Link>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </header>

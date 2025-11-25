@@ -1,77 +1,62 @@
 /* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap');
 @import "tailwindcss";
 
-:root {
-  /* Color Palette - Premium & Vibrant */
-  --primary: #E91E63;
-  --primary-dark: #C2185B;
-  --primary-light: #F8BBD0;
+@theme {
+  /* Simplified Neutral Palette */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
 
-  --secondary: #9C27B0;
-  --secondary-dark: #7B1FA2;
-  --secondary-light: #E1BEE7;
+  /* Single Accent Color - Soft Rose */
+  --color-primary: #e11d48;
+  --color-primary-light: #fecdd3;
+  --color-primary-dark: #be123c;
 
-  --accent: #FF6F00;
-  --accent-light: #FFB74D;
+  /* Semantic Colors - Minimal */
+  --color-success: #22c55e;
+  --color-error: #ef4444;
 
-  --background: #FFFFFF;
-  --foreground: #1A1A1A;
-  --surface: #F5F5F5;
-  --surface-light: #FAFAFA;
-
-  --success: #4CAF50;
-  --warning: #FF9800;
-  --error: #F44336;
-  --info: #2196F3;
-
-  --text-primary: #1A1A1A;
-  --text-secondary: #666666;
-  --text-muted: #999999;
-
-  --border: #E0E0E0;
-  --border-light: #F0F0F0;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #E91E63 0%, #9C27B0 100%);
-  --gradient-secondary: linear-gradient(135deg, #FF6F00 0%, #E91E63 100%);
-  --gradient-accent: linear-gradient(135deg, #9C27B0 0%, #673AB7 100%);
+  /* Subtle Shadows */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
 }
 
-@theme inline {
-  --color-primary: var(--primary);
-  --color-primary-dark: var(--primary-dark);
-  --color-primary-light: var(--primary-light);
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
 
-  --color-secondary: var(--secondary);
-  --color-secondary-dark: var(--secondary-dark);
-  --color-secondary-light: var(--secondary-light);
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
 
-  --color-accent: var(--accent);
-  --color-accent-light: var(--accent-light);
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-light: var(--surface-light);
+    --primary: 347 83% 51%;
+    --primary-foreground: 0 0% 100%;
 
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-error: var(--error);
-  --color-info: var(--info);
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-muted: var(--text-muted);
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
 
-  --color-border: var(--border);
-  --color-border-light: var(--border-light);
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 347 83% 51%;
+
+    --radius: 0.75rem;
+  }
 }
 
 * {
@@ -82,16 +67,16 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  font-size: 16px;
+  background: white;
+  color: #171717;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
@@ -103,7 +88,7 @@ h6 {
   font-family: 'Playfair Display', serif;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--text-primary);
+  color: #171717;
 }
 
 /* Smooth transitions */
@@ -112,39 +97,29 @@ button,
 input,
 textarea,
 select {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
-/* Focus styles */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-/* Scrollbar styling */
+/* Clean scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surface-light);
+  background: #f5f5f5;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary-light);
-  border-radius: 5px;
+  background: #d4d4d4;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  background: #a3a3a3;
 }
 
-/* Animations */
+/* Simple animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -157,57 +132,11 @@ select:focus-visible {
   }
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-  }
-
-  to {
-    transform: translateX(0);
-  }
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-}
-
 .animate-fade-in {
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeIn 0.3s ease-out;
 }
 
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Glassmorphism effect */
-.glass {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-/* Gradient text */
-.gradient-text {
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Custom utilities */
+/* Clean container */
 .container-custom {
   max-width: 1280px;
   margin: 0 auto;
@@ -218,4 +147,16 @@ select:focus-visible {
   .container-custom {
     padding: 0 2rem;
   }
+}
+
+@media (min-width: 1024px) {
+  .container-custom {
+    padding: 0 3rem;
+  }
+}
+
+/* Selection */
+::selection {
+  background-color: #fecdd3;
+  color: #171717;
 }

@@ -8,25 +8,26 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-    ({ className, label, error, fullWidth = true, ...props }, ref) => {
+    ({ className, label, error, fullWidth = true, type = 'text', ...props }, ref) => {
         return (
             <div className={cn('flex flex-col gap-1.5', fullWidth ? 'w-full' : '')}>
                 {label && (
-                    <label className="text-sm font-medium text-gray-700">
+                    <label className="text-sm font-medium text-neutral-700">
                         {label}
                     </label>
                 )}
                 <input
                     ref={ref}
+                    type={type}
                     className={cn(
-                        'px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 disabled:opacity-50 disabled:bg-gray-50',
-                        error ? 'border-error focus:border-error focus:ring-error/20' : '',
+                        'px-3 py-2 rounded-lg border border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:bg-neutral-50',
+                        error ? 'border-red-500 focus:ring-red-500' : '',
                         className
                     )}
                     {...props}
                 />
                 {error && (
-                    <span className="text-xs text-error animate-slide-in">{error}</span>
+                    <span className="text-sm text-red-500">{error}</span>
                 )}
             </div>
         );
