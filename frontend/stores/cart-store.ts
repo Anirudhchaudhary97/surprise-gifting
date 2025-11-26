@@ -48,6 +48,16 @@ export const useCartStore = create<CartState>()(
     {
       name: "cart-storage",
       partialize: (state) => ({ items: state.items }),
+      skipHydration: true,
     }
   )
 );
+
+type CartStoreWithPersist = typeof useCartStore & {
+  persist: {
+    rehydrate: () => Promise<void>;
+    hasHydrated: () => boolean;
+  };
+};
+
+export const cartStorePersist = (useCartStore as CartStoreWithPersist).persist;

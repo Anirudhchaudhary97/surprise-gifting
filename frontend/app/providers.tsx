@@ -1,7 +1,8 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import { cartStorePersist } from "@/stores/cart-store";
 
 interface AppProvidersProps {
     children: ReactNode;
@@ -19,6 +20,10 @@ export function AppProviders({ children }: AppProvidersProps) {
                 },
             }),
     );
+
+    useEffect(() => {
+        cartStorePersist.rehydrate();
+    }, []);
 
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
