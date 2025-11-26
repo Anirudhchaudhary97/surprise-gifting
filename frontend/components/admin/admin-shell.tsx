@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { LayoutDashboard, Package, ShoppingCart, Tags } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarNav, SidebarNavItem } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/stores/auth-store";
 
 const navItems = [
     { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -15,6 +17,20 @@ const navItems = [
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const { isAdmin, user } = useAuthStore();
+
+    useEffect(() => {
+        if (!isAdmin && user) {
+            router.push("/");
+        } else if (!user) {
+            router.push("/login");
+        }
+    }, [isAdmin, user, router]);
+
+    if (!isAdmin) {
+        return null;
+    }
 
     return (
         <div className="flex min-h-screen bg-background">

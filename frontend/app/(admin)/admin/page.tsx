@@ -1,13 +1,29 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { AdminTable } from "@/components/admin/admin-table";
 import { getCategories, getGifts, getOrders } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { type Gift, type Order, type Category } from "@/types";
 
-export default async function AdminOverviewPage() {
-    const [gifts, orders, categories] = await Promise.all([
-        getGifts(),
-        getOrders(),
-        getCategories(),
-    ]);
+export default function AdminOverviewPage() {
+    const [gifts, setGifts] = useState<Gift[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        Promise.all([getGifts(), getOrders(), getCategories()]).then(([giftsData, ordersData, categoriesData]) => {
+            setGifts(giftsData);
+            setOrders(ordersData);
+            setCategories(categoriesData);
+            setLoading(false);
+        });
+    }, []);
+
+    if (loading) {
+        return <div className="text-center">Loading...</div>;
+    }
 
     return (
         <div className="space-y-10">

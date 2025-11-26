@@ -13,8 +13,9 @@ interface GiftsPageProps {
 export default async function GiftsPage({ searchParams }: GiftsPageProps) {
     const [gifts, categories] = await Promise.all([getGifts(), getCategories()]);
 
-    const selectedCategory = typeof searchParams?.category === "string" ? searchParams?.category : undefined;
-    const searchTerm = typeof searchParams?.search === "string" ? searchParams?.search : undefined;
+    const resolvedParams = await searchParams;
+    const selectedCategory = typeof resolvedParams?.category === "string" ? resolvedParams?.category : undefined;
+    const searchTerm = typeof resolvedParams?.search === "string" ? resolvedParams?.search : undefined;
 
     const activeCategory = selectedCategory
         ? categories.find(

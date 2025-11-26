@@ -1,11 +1,27 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { AdminTable } from "@/components/admin/admin-table";
 import { Button } from "@/components/ui/button";
 import { getGifts } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { type Gift } from "@/types";
 
-export default async function AdminGiftsPage() {
-    const gifts = await getGifts();
+export default function AdminGiftsPage() {
+    const [gifts, setGifts] = useState<Gift[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getGifts().then((data) => {
+            setGifts(data);
+            setLoading(false);
+        });
+    }, []);
+
+    if (loading) {
+        return <div className="text-center">Loading...</div>;
+    }
 
     return (
         <div className="space-y-6">

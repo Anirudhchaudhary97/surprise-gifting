@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Menu, ShoppingBag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cart-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -18,6 +19,7 @@ export function Navbar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const cartCount = useCartStore((state) => state.count());
+    const isAdmin = useAuthStore((state) => state.isAdmin);
 
     const toggleMenu = () => setIsOpen((prev) => !prev);
 
@@ -51,6 +53,17 @@ export function Navbar() {
                             </Link>
                         );
                     })}
+                    {isAdmin && (
+                        <Link
+                            href="/admin"
+                            className={cn(
+                                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                                pathname.startsWith("/admin") ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                            )}
+                        >
+                            Dashboard
+                        </Link>
+                    )}
                 </nav>
 
                 <div className="flex items-center gap-3">
@@ -90,6 +103,18 @@ export function Navbar() {
                                 </Link>
                             );
                         })}
+                        {isAdmin && (
+                            <Link
+                                href="/admin"
+                                className={cn(
+                                    "rounded-md px-3 py-2 text-sm font-medium",
+                                    pathname.startsWith("/admin") ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                                )}
+                                onClick={() => setIsOpen(false)}
+                            >
+                                Dashboard
+                            </Link>
+                        )}
                         <Link
                             href="/cart"
                             className="mt-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -109,3 +134,4 @@ export function Navbar() {
         </header>
     );
 }
+

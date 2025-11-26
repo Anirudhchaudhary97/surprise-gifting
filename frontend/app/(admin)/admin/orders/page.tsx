@@ -1,9 +1,25 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { AdminTable } from "@/components/admin/admin-table";
 import { getOrders } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { type Order } from "@/types";
 
-export default async function AdminOrdersPage() {
-    const orders = await getOrders();
+export default function AdminOrdersPage() {
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getOrders().then((data) => {
+            setOrders(data);
+            setLoading(false);
+        });
+    }, []);
+
+    if (loading) {
+        return <div className="text-center">Loading...</div>;
+    }
 
     return (
         <div className="space-y-6">

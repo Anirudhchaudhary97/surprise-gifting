@@ -12,8 +12,24 @@ interface GiftDetailPageProps {
     params: { id: string };
 }
 
+// Enable dynamic params for runtime generation
+export const dynamicParams = true;
+
+// Optional: Pre-generate static pages for better performance
+export async function generateStaticParams() {
+    try {
+        const gifts = await getGifts();
+        return gifts.map((gift) => ({
+            id: gift.slug ?? gift.id,
+        }));
+    } catch (error) {
+        console.error("Error generating static params:", error);
+        return [];
+    }
+}
+
 export default async function GiftDetailPage({ params }: GiftDetailPageProps) {
-    const { id } = params;
+    const { id } = await params;
     const gift = await getGiftById(id);
 
     if (!gift) {
