@@ -19,6 +19,20 @@ export interface Gift {
   shortDescription: string;
   description: string;
   tags: string[];
+  stock?: number;
+  isCustomizable?: boolean;
+  allowPersonalMsg?: boolean;
+  allowAddons?: boolean;
+  allowImageUpload?: boolean;
+  addonsOptions?: string[];
+  featured?: boolean;
+  imageRecords?: GiftImageRecord[];
+}
+
+export interface GiftImageRecord {
+  id?: string;
+  url: string;
+  isPrimary?: boolean;
 }
 
 export interface Review {

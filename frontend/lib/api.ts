@@ -13,6 +13,81 @@ import {
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+const PLACEHOLDER_IMAGE = "/images/placeholder.svg";
+
+function normalizeRemoteImage(url: string | undefined | null): string {
+  if (!url) {
+    return PLACEHOLDER_IMAGE;
+  }
+
+  if (url.startsWith("/")) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    if (parsed.hostname === "images.unsplash.com") {
+      if (!parsed.searchParams.has("auto")) {
+        parsed.searchParams.set("auto", "format");
+      }
+      if (!parsed.searchParams.has("fit")) {
+        parsed.searchParams.set("fit", "crop");
+      }
+      if (!parsed.searchParams.has("w")) {
+        parsed.searchParams.set("w", "800");
+      }
+      if (!parsed.searchParams.has("q")) {
+        parsed.searchParams.set("q", "80");
+      }
+    }
+
+    return parsed.toString();
+  } catch (error) {
+    console.warn("Failed to normalize image URL", url, error);
+    return PLACEHOLDER_IMAGE;
+  }
+}
+
+function coerceImageValue(image: unknown): string | undefined {
+  if (!image) {
+    return undefined;
+  }
+
+  if (typeof image === "string") {
+    return image;
+  }
+
+  if (typeof image === "object") {
+    const candidate =
+      (
+        image as {
+          url?: string;
+          imageUrl?: string;
+          src?: string;
+          path?: string;
+        }
+      ).url ??
+      (
+        image as {
+          imageUrl?: string;
+          url?: string;
+          src?: string;
+          path?: string;
+        }
+      ).imageUrl ??
+      (image as { src?: string; path?: string }).src ??
+      (image as { path?: string }).path;
+
+    if (typeof candidate === "string") {
+      return candidate;
+    }
+  }
+
+  return undefined;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -77,21 +152,204 @@ async function fetchFromApi<T>(
   }
 }
 
+async function parseApiError(
+  response: Response,
+  fallbackMessage: string
+): Promise<never> {
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    message?: string;
+  };
+
+  throw new Error(payload.error ?? payload.message ?? fallbackMessage);
+}
+
+function ensureApiBaseConfigured() {
+  if (!API_BASE) {
+    throw new Error("API base URL is not configured");
+  }
+}
+
+function requireAdminToken(token: string | null | undefined): string {
+  if (!token) {
+    throw new Error("Admin authentication required");
+  }
+
+  return token;
+}
+
 function mapGift(apiGift: any): Gift {
+  const imageRecords = Array.isArray(apiGift.images)
+    ? apiGift.images
+        .map((image: any) => {
+          const source = coerceImageValue(image);
+          if (!source) {
+            return null;
+          }
+
+          const idCandidate =
+            typeof image === "object" && image
+              ? image.id ?? image.imageId ?? image._id
+              : undefined;
+
+          return {
+            id: idCandidate ? String(idCandidate) : undefined,
+            url: normalizeRemoteImage(source),
+            isPrimary:
+              typeof image === "object" && image
+                ? Boolean(
+                    image.isPrimary ??
+                      image.primary ??
+                      image.is_primary ??
+                      image.default
+                  )
+                : false,
+          };
+        })
+        .filter(
+          (
+            record
+          ): record is { id?: string; url: string; isPrimary?: boolean } =>
+            Boolean(record)
+        )
+    : [];
+
+  if (imageRecords.length) {
+    imageRecords.sort(
+      (a, b) => Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary))
+    );
+  }
+
+  const candidateImages: (string | undefined)[] = [];
+
+  if (!imageRecords.length && Array.isArray(apiGift.images)) {
+    const inlineSource = coerceImageValue(apiGift.images[0]);
+    if (inlineSource) {
+      candidateImages.push(inlineSource);
+    }
+  }
+
+  candidateImages.push(
+    coerceImageValue(apiGift.imageUrl),
+    coerceImageValue(apiGift.coverImage),
+    coerceImageValue(apiGift.thumbnail)
+  );
+
+  const primaryCandidate = candidateImages.find(
+    (value) => typeof value === "string" && value.length > 0
+  );
+
+  const normalizedPrimary = normalizeRemoteImage(primaryCandidate);
+
+  const images = imageRecords.length
+    ? imageRecords.map((record) => record.url)
+    : [normalizedPrimary];
+
+  const imageRecordsResult =
+    imageRecords.length > 0
+      ? imageRecords
+      : primaryCandidate
+      ? [
+          {
+            id: undefined,
+            url: normalizedPrimary,
+            isPrimary: true,
+          },
+        ]
+      : undefined;
+
+  const ratingSource =
+    apiGift.averageRating ?? apiGift.rating ?? apiGift.reviews?.average ?? 0;
+  const reviewsCountSource =
+    apiGift._count?.reviews ??
+    apiGift.reviewsCount ??
+    (Array.isArray(apiGift.reviews) ? apiGift.reviews.length : 0);
+
+  let addonsOptions: string[] = [];
+  if (Array.isArray(apiGift.addonsOptions)) {
+    addonsOptions = apiGift.addonsOptions;
+  } else if (
+    typeof apiGift.addonsOptions === "string" &&
+    apiGift.addonsOptions.trim().length
+  ) {
+    try {
+      const parsed = JSON.parse(apiGift.addonsOptions);
+      if (Array.isArray(parsed)) {
+        addonsOptions = parsed;
+      }
+    } catch (error) {
+      console.warn("Failed to parse addons options", error);
+    }
+  }
+
+  const stockCandidate =
+    apiGift.stock ?? apiGift.inventory ?? apiGift.quantity ?? undefined;
+
   return {
     id: apiGift.id,
     name: apiGift.name,
     slug: apiGift.slug ?? apiGift.id,
-    price: apiGift.price,
-    images: (apiGift.images ?? []).map((image: any) => image.url),
-    categoryId: apiGift.categoryId,
-    categoryName: apiGift.category?.name ?? "Uncategorized",
-    rating: Number(apiGift.averageRating ?? apiGift.rating ?? 0),
-    reviewsCount: apiGift._count?.reviews ?? apiGift.reviews?.length ?? 0,
+    price: Number(apiGift.price ?? 0),
+    images,
+    imageRecords: imageRecordsResult,
+    categoryId:
+      apiGift.categoryId ??
+      apiGift.category?.id ??
+      apiGift.category?.categoryId ??
+      "unknown",
+    categoryName:
+      apiGift.category?.name ?? apiGift.categoryName ?? "Uncategorized",
+    rating: Number(ratingSource ?? 0),
+    reviewsCount: Number(reviewsCountSource ?? 0),
     shortDescription:
-      apiGift.shortDescription ?? apiGift.description?.slice(0, 120) ?? "",
+      apiGift.shortDescription ??
+      apiGift.subtitle ??
+      (typeof apiGift.description === "string"
+        ? apiGift.description.slice(0, 120)
+        : ""),
     description: apiGift.description ?? "",
-    tags: apiGift.tags ?? apiGift.addonsOptions ?? [],
+    tags: Array.isArray(apiGift.tags)
+      ? apiGift.tags
+      : Array.isArray(apiGift.addonsOptions)
+      ? apiGift.addonsOptions
+      : Array.isArray(apiGift.labels)
+      ? apiGift.labels
+      : addonsOptions,
+    stock:
+      stockCandidate !== undefined && stockCandidate !== null
+        ? Number(stockCandidate)
+        : undefined,
+    isCustomizable:
+      apiGift.isCustomizable !== undefined
+        ? Boolean(apiGift.isCustomizable)
+        : apiGift.customizable !== undefined
+        ? Boolean(apiGift.customizable)
+        : undefined,
+    allowPersonalMsg:
+      apiGift.allowPersonalMsg !== undefined
+        ? Boolean(apiGift.allowPersonalMsg)
+        : apiGift.personalMessageAllowed !== undefined
+        ? Boolean(apiGift.personalMessageAllowed)
+        : undefined,
+    allowAddons:
+      apiGift.allowAddons !== undefined
+        ? Boolean(apiGift.allowAddons)
+        : addonsOptions.length > 0
+        ? true
+        : undefined,
+    allowImageUpload:
+      apiGift.allowImageUpload !== undefined
+        ? Boolean(apiGift.allowImageUpload)
+        : apiGift.imageUploadAllowed !== undefined
+        ? Boolean(apiGift.imageUploadAllowed)
+        : undefined,
+    addonsOptions,
+    featured:
+      apiGift.featured !== undefined
+        ? Boolean(apiGift.featured)
+        : apiGift.isFeatured !== undefined
+        ? Boolean(apiGift.isFeatured)
+        : undefined,
   };
 }
 
@@ -100,7 +358,12 @@ function mapCategory(apiCategory: any): Category {
     id: apiCategory.id,
     name: apiCategory.name,
     slug: apiCategory.slug,
-    image: apiCategory.imageUrl ?? apiCategory.image ?? "/file.svg",
+    image: normalizeRemoteImage(
+      coerceImageValue(apiCategory.imageUrl) ??
+        coerceImageValue(apiCategory.image) ??
+        coerceImageValue(apiCategory.coverImage) ??
+        PLACEHOLDER_IMAGE
+    ),
     description: apiCategory.description ?? "",
   };
 }
@@ -119,27 +382,51 @@ function mapReview(apiReview: any): Review {
 }
 
 function mapOrder(apiOrder: any): Order {
+  const items = Array.isArray(apiOrder.items) ? apiOrder.items : [];
+
   return {
     id: apiOrder.id,
-    status: String(apiOrder.status ?? "").toLowerCase() as Order["status"],
-    total: apiOrder.total ?? 0,
+    status: String(
+      apiOrder.status ?? "pending"
+    ).toLowerCase() as Order["status"],
+    total: Number(apiOrder.total ?? 0),
     createdAt: apiOrder.createdAt,
     shippingAddress: {
-      fullName: apiOrder.address?.fullName ?? "Unknown",
-      line1: apiOrder.address?.addressLine ?? "",
-      line2: "",
-      city: apiOrder.address?.city ?? "",
-      state: apiOrder.address?.state ?? "",
-      postalCode: apiOrder.address?.zipCode ?? "",
-      country: apiOrder.address?.country ?? "Nepal",
+      fullName:
+        apiOrder.address?.fullName ??
+        apiOrder.shippingAddress?.fullName ??
+        "Unknown",
+      line1:
+        apiOrder.address?.addressLine ?? apiOrder.shippingAddress?.line1 ?? "",
+      line2: apiOrder.shippingAddress?.line2 ?? "",
+      city: apiOrder.address?.city ?? apiOrder.shippingAddress?.city ?? "",
+      state: apiOrder.address?.state ?? apiOrder.shippingAddress?.state ?? "",
+      postalCode:
+        apiOrder.address?.zipCode ?? apiOrder.shippingAddress?.postalCode ?? "",
+      country:
+        apiOrder.address?.country ??
+        apiOrder.shippingAddress?.country ??
+        "Nepal",
     },
-    items: (apiOrder.items ?? []).map((item: any) => ({
-      giftId: item.giftId,
-      name: item.gift?.name ?? item.name ?? "Gift",
-      image: item.gift?.images?.[0]?.url ?? item.image ?? "/file.svg",
-      price: item.price ?? item.gift?.price ?? 0,
-      quantity: item.quantity ?? 1,
-    })),
+    items: items.map((item: any) => {
+      const imageSource =
+        coerceImageValue(item.image) ??
+        (Array.isArray(item.images)
+          ? coerceImageValue(item.images[0])
+          : undefined) ??
+        (item.gift
+          ? coerceImageValue(item.gift.images?.[0]) ??
+            coerceImageValue(item.gift.imageUrl)
+          : undefined);
+
+      return {
+        giftId: item.giftId ?? item.id ?? "unknown",
+        name: item.gift?.name ?? item.name ?? "Gift",
+        image: normalizeRemoteImage(imageSource),
+        price: Number(item.price ?? item.gift?.price ?? 0),
+        quantity: Number(item.quantity ?? 1),
+      };
+    }),
   };
 }
 
@@ -198,11 +485,9 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function getFeaturedGifts(): Promise<Gift[]> {
-  const response = await fetchFromApi(
-    "/gifts",
-    () => giftsMock.slice(0, 3),
-    { query: { featured: true, limit: 3 } }
-  );
+  const response = await fetchFromApi("/gifts", () => giftsMock.slice(0, 3), {
+    query: { featured: true, limit: 3 },
+  });
 
   const gifts = Array.isArray((response as any).gifts)
     ? (response as any).gifts
@@ -222,7 +507,7 @@ export async function getGifts(): Promise<Gift[]> {
 export async function getGiftById(id: string): Promise<Gift | undefined> {
   const fallback = giftsMock.find((gift) => gift.id === id || gift.slug === id);
   if (!API_BASE) {
-    return fallback;
+    return fallback ? mapGift(fallback) : undefined;
   }
 
   try {
@@ -243,7 +528,7 @@ export async function getGiftById(id: string): Promise<Gift | undefined> {
     return mapGift(apiGift);
   } catch (error) {
     console.warn(`Falling back to mock gift ${id}`, error);
-    return fallback;
+    return fallback ? mapGift(fallback) : undefined;
   }
 }
 
@@ -259,14 +544,13 @@ export async function getGiftReviews(giftId: string): Promise<Review[]> {
 
 export async function getOrders(token?: string | null): Promise<Order[]> {
   if (!token) {
-    return ordersMock;
+    return ordersMock.map((order) => mapOrder(order));
   }
 
-  const orders = await fetchFromApi(
-    "/orders/user",
-    () => ordersMock,
-    { token, cache: "no-store" }
-  );
+  const orders = await fetchFromApi("/orders/user", () => ordersMock, {
+    token,
+    cache: "no-store",
+  });
 
   return orders.map(mapOrder);
 }
@@ -277,11 +561,11 @@ export async function getOrderById(
 ): Promise<Order | undefined> {
   const fallback = ordersMock.find((order) => order.id === id);
   if (!API_BASE) {
-    return fallback;
+    return fallback ? mapOrder(fallback) : undefined;
   }
 
   if (!token) {
-    return fallback;
+    return fallback ? mapOrder(fallback) : undefined;
   }
 
   try {
@@ -301,6 +585,221 @@ export async function getOrderById(
     return mapOrder(apiOrder);
   } catch (error) {
     console.warn(`Falling back to mock order ${id}`, error);
-    return fallback;
+    return fallback ? mapOrder(fallback) : undefined;
   }
 }
+
+export interface CategoryPayload {
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+}
+
+export async function createCategory(
+  payload: CategoryPayload,
+  token: string | null
+): Promise<Category> {
+  ensureApiBaseConfigured();
+  const adminToken = requireAdminToken(token);
+
+  const response = await fetch(`${API_BASE}/categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseApiError(response, "Failed to create category");
+  }
+
+  const result = await response.json();
+  return mapCategory(result);
+}
+
+export async function updateCategory(
+  id: string,
+  payload: Partial<CategoryPayload>,
+  token: string | null
+): Promise<Category> {
+  ensureApiBaseConfigured();
+  const adminToken = requireAdminToken(token);
+
+  const response = await fetch(`${API_BASE}/categories/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseApiError(response, "Failed to update category");
+  }
+
+  const result = await response.json();
+  return mapCategory(result);
+}
+
+export async function deleteCategory(
+  id: string,
+  token: string | null
+): Promise<void> {
+  ensureApiBaseConfigured();
+  const adminToken = requireAdminToken(token);
+
+  const response = await fetch(`${API_BASE}/categories/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseApiError(response, "Failed to delete category");
+  }
+}
+
+export interface GiftWritePayload {
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  categoryId: string;
+  isCustomizable: boolean;
+  allowPersonalMsg: boolean;
+  allowAddons: boolean;
+  allowImageUpload: boolean;
+  addonsOptions: string[];
+  featured: boolean;
+}
+
+function buildGiftFormData(
+  payload: GiftWritePayload,
+  images: File[]
+): FormData {
+  const formData = new FormData();
+
+  formData.append("name", payload.name);
+  formData.append("description", payload.description);
+  formData.append("price", String(payload.price));
+  formData.append("stock", String(payload.stock));
+  formData.append("categoryId", payload.categoryId);
+  formData.append("isCustomizable", String(payload.isCustomizable));
+  formData.append("allowPersonalMsg", String(payload.allowPersonalMsg));
+  formData.append("allowAddons", String(payload.allowAddons));
+  formData.append("allowImageUpload", String(payload.allowImageUpload));
+  formData.append("featured", String(payload.featured));
+
+  formData.append("addonsOptions", JSON.stringify(payload.addonsOptions ?? []));
+
+  images.forEach((file) => {
+    formData.append("images", file);
+  });
+
+  return formData;
+}
+
+export async function createGift(
+  payload: GiftWritePayload,
+  images: File[],
+  token: string | null
+): Promise<Gift> {
+  ensureApiBaseConfigured();
+  const adminToken = requireAdminToken(token);
+
+  const formData = buildGiftFormData(payload, images);
+
+  const response = await fetch(`${API_BASE}/gifts`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: formData,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseApiError(response, "Failed to create gift");
+  }
+
+  const result = await response.json();
+  return mapGift(result);
+}
+
+export async function updateGift(
+  id: string,
+  payload: GiftWritePayload,
+  images: File[],
+  token: string | null
+): Promise<Gift> {
+  ensureApiBaseConfigured();
+  const adminToken = requireAdminToken(token);
+
+  const formData = buildGiftFormData(payload, images);
+
+  const response = await fetch(`${API_BASE}/gifts/${id}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: formData,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseApiError(response, "Failed to update gift");
+  }
+
+  const result = await response.json();
+  return mapGift(result);
+}
+
+export async function deleteGift(
+  id: string,
+  token: string | null
+): Promise<void> {
+  ensureApiBaseConfigured();
+  const adminToken = requireAdminToken(token);
+
+  const response = await fetch(`${API_BASE}/gifts/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseApiError(response, "Failed to delete gift");
+  }
+}
+
+export async function deleteGiftImage(
+  imageId: string,
+  token: string | null
+): Promise<void> {
+  ensureApiBaseConfigured();
+  const adminToken = requireAdminToken(token);
+
+  const response = await fetch(`${API_BASE}/gifts/images/${imageId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseApiError(response, "Failed to delete gift image");
+  }
+}
+
+/* eslint-enable @typescript-eslint/no-explicit-any */

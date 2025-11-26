@@ -48,7 +48,6 @@ export default function AdminOrdersPage() {
                     },
                 ]}
                 emptyState="No orders found."
-                onEdit={(order) => alert(`Update status for ${order.id} coming soon`)}
             />
         </div>
     );

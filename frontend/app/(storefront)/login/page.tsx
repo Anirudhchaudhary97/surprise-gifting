@@ -28,8 +28,9 @@ export default function LoginPage() {
             const result = await login(payload);
             setAuth(result);
             router.push("/gifts");
-        } catch (err: any) {
-            setError(err?.message ?? "Unable to sign in");
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Unable to sign in";
+            setError(message);
         } finally {
             setIsLoading(false);
         }

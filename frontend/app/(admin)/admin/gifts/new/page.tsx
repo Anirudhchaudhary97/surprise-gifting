@@ -2,80 +2,80 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { GiftForm, type GiftFormValues } from "@/components/admin/gift-form";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+    createGift,
+    getCategories,
+    type GiftWritePayload,
+} from "@/lib/api";
+import { useAuthStore } from "@/stores/auth-store";
+
+function buildPayload(values: GiftFormValues): { payload: GiftWritePayload; images: File[] } {
+    const { images, ...rest } = values;
+    return {
+        payload: {
+            ...rest,
+            addonsOptions: rest.addonsOptions ?? [],
+        },
+        images,
+    };
+}
 
 export default function NewGiftPage() {
     const router = useRouter();
-    const [loading, setLoading] = useState(false);
+    const { token } = useAuthStore();
+    const queryClient = useQueryClient();
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setLoading(true);
-        // TODO: Implement gift creation
-        alert("Gift creation coming soon!");
-        setLoading(false);
+    const [formError, setFormError] = useState<string | null>(null);
+
+    const { data: categories = [] } = useQuery({
+        queryKey: ["categories"],
+        queryFn: getCategories,
+    });
+
+    const createMutation = useMutation({
+        mutationFn: (values: GiftFormValues) => {
+            const { payload, images } = buildPayload(values);
+            return createGift(payload, images, token ?? null);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["gifts"] });
+            router.push("/admin/gifts");
+        },
+        onError: (error: Error) => setFormError(error.message),
+    });
+
+    const handleSubmit = (values: GiftFormValues) => {
+        setFormError(null);
+        createMutation.mutate(values);
     };
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold">Add New Gift</h1>
-                    <p className="text-sm text-muted-foreground">Create a new gift offering.</p>
+                    <h1 className="text-2xl font-semibold">Add new gift</h1>
+                    <p className="text-sm text-muted-foreground">Craft a new surprise for customers.</p>
                 </div>
-                <Button variant="outline" asChild>
-                    <Link href="/admin/gifts">Cancel</Link>
-                </Button>
+                <Button variant="outline" onClick={() => router.push("/admin/gifts")}>Back to list</Button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6 rounded-xl border border-border bg-card p-6">
-                <div className="space-y-4">
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium">
-                            Gift Name
-                        </label>
-                        <Input id="name" name="name" required className="mt-1" />
+            <div className="rounded-xl border border-border bg-card p-6">
+                {formError && (
+                    <div className="mb-4 rounded-md border border-destructive/70 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        {formError}
                     </div>
-
-                    <div>
-                        <label htmlFor="description" className="block text-sm font-medium">
-                            Description
-                        </label>
-                        <textarea
-                            id="description"
-                            name="description"
-                            required
-                            rows={4}
-                            className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="price" className="block text-sm font-medium">
-                            Price
-                        </label>
-                        <Input id="price" name="price" type="number" step="0.01" required className="mt-1" />
-                    </div>
-
-                    <div>
-                        <label htmlFor="category" className="block text-sm font-medium">
-                            Category
-                        </label>
-                        <Input id="category" name="category" required className="mt-1" />
-                    </div>
-                </div>
-
-                <div className="flex justify-end gap-3">
-                    <Button type="button" variant="outline" onClick={() => router.push("/admin/gifts")}>
-                        Cancel
-                    </Button>
-                    <Button type="submit" disabled={loading}>
-                        {loading ? "Creating..." : "Create Gift"}
-                    </Button>
-                </div>
-            </form>
+                )}
+                <GiftForm
+                    categories={categories}
+                    loading={createMutation.isPending}
+                    submitLabel={createMutation.isPending ? "Creating..." : "Create gift"}
+                    onSubmit={handleSubmit}
+                    onCancel={() => router.push("/admin/gifts")}
+                />
+            </div>
         </div>
     );
 }

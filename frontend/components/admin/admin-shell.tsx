@@ -54,7 +54,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     </SidebarNav>
                 </SidebarContent>
             </Sidebar>
-            <div className="flex w-full flex-col lg:pl-64">
+            <div className="flex w-full flex-col lg:pl-6">
                 <header className="sticky top-0 z-30 border-b border-border bg-background/80 px-6 py-4 backdrop-blur">
                     <div className="flex items-center justify-between">
                         <p className="text-base font-semibold">Dashboard</p>

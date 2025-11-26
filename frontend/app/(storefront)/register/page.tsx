@@ -29,8 +29,9 @@ export default function RegisterPage() {
             const result = await register(payload);
             setAuth(result);
             router.push("/gifts");
-        } catch (err: any) {
-            setError(err?.message ?? "Unable to create your account");
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Unable to create your account";
+            setError(message);
         } finally {
             setIsLoading(false);
         }
