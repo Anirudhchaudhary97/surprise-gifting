@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
+import { AddToCartButton } from "@/components/gifts/add-to-cart-button";
 import { Button } from "@/components/ui/button";
-import { useCartStore } from "@/stores/cart-store";
 import { formatCurrency } from "@/lib/utils";
 import { type Gift } from "@/types";
 
@@ -13,18 +13,6 @@ interface GiftCardProps {
 }
 
 export function GiftCard({ gift }: GiftCardProps) {
-    const addItem = useCartStore((state) => state.addItem);
-
-    const handleAddToCart = () => {
-        addItem({
-            id: gift.id,
-            name: gift.name,
-            price: gift.price,
-            image: gift.images[0] ?? "/file.svg",
-            quantity: 1,
-        });
-    };
-
     return (
         <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm transition hover:-translate-y-0.5">
             <div className="relative h-56 w-full">
@@ -59,9 +47,7 @@ export function GiftCard({ gift }: GiftCardProps) {
                 <Button asChild className="w-full">
                     <Link href={`/gifts/${gift.slug ?? gift.id}`}>View details</Link>
                 </Button>
-                <Button variant="outline" className="w-full" onClick={handleAddToCart}>
-                    Add to cart
-                </Button>
+                <AddToCartButton gift={gift} variant="outline" className="w-full" />
             </div>
         </div>
     );

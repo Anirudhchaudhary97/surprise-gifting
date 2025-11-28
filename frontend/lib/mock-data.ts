@@ -50,6 +50,30 @@ export const giftsMock: Gift[] = [
     description:
       "Crafted for early risers, this basket includes an assortment of freshly baked goods, locally sourced jams, organic tea blends, and a personalized note card.",
     tags: ["breakfast", "birthday", "gourmet"],
+    isCustomizable: true,
+    allowPersonalMsg: true,
+    allowAddons: true,
+    allowImageUpload: true,
+    addons: [
+      {
+        id: "artisan-coffee",
+        name: "Artisan coffee beans",
+        price: 12,
+        description: "Single-origin roast from the Himalayas",
+      },
+      {
+        id: "handcrafted-mug",
+        name: "Handcrafted ceramic mug",
+        price: 18,
+        description: "Locally made stoneware mug in a neutral glaze",
+      },
+      {
+        id: "greeting-card",
+        name: "Handwritten greeting card",
+        price: 8,
+        description: "Include a premium cardstock card with your message",
+      },
+    ],
   },
   {
     id: "gift-2",
@@ -133,17 +157,40 @@ export const reviewsMock: Review[] = [
 
 export const cartMock: CartItem[] = [
   {
-    id: "gift-1",
+    id: "cart-gift-1-standard",
+    giftId: "gift-1",
     name: "Sunrise Breakfast Basket",
-    price: 89,
     image: "/images/gifts/breakfast-1.jpg",
+    basePrice: 89,
+    price: 158,
     quantity: 1,
+    addons: [
+      {
+        id: "greeting-card",
+        name: "Handwritten greeting card",
+        price: 8,
+      },
+      {
+        id: "artisan-coffee",
+        name: "Artisan coffee beans",
+        price: 12,
+      },
+    ],
+    personalization: {
+      message: "Happy birthday! Enjoy the treats.",
+      giftWrap: {
+        enabled: true,
+        price: 49,
+      },
+    },
   },
   {
-    id: "gift-3",
+    id: "cart-gift-3-default",
+    giftId: "gift-3",
     name: "Executive Productivity Kit",
-    price: 149,
     image: "/images/gifts/executive-1.jpg",
+    basePrice: 149,
+    price: 149,
     quantity: 2,
   },
 ];
@@ -154,6 +201,7 @@ export const ordersMock: Order[] = [
     status: "preparing",
     total: 387,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
+    paymentMethod: "stripe",
     shippingAddress: {
       fullName: "Ananya Rao",
       line1: "221B Residency Road",
@@ -184,6 +232,7 @@ export const ordersMock: Order[] = [
     status: "delivered",
     total: 149,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
+    paymentMethod: "cod",
     shippingAddress: {
       fullName: "Rahul Singh",
       line1: "78 Ocean View",

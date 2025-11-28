@@ -7,6 +7,7 @@ import {
 import {
   type Category,
   type Gift,
+  type GiftAddonOption,
   type GiftImageRecord,
   type Order,
   type Review,
@@ -86,6 +87,104 @@ function coerceImageValue(image: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+function slugifyLabel(value: string | undefined | null, fallback: string) {
+  if (!value) {
+    return fallback;
+  }
+
+  const slug = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+  return slug.length ? slug : fallback;
+}
+
+function normalizeAddonOption(
+  raw: Record<string, unknown>,
+  index: number
+): GiftAddonOption | null {
+  const nameCandidate =
+    (raw.name as string | undefined) ??
+    (raw.label as string | undefined) ??
+    (raw.title as string | undefined);
+
+  const priceCandidate =
+    (raw.price as number | string | undefined) ??
+    (raw.amount as number | string | undefined);
+
+  const descriptionCandidate =
+    (raw.description as string | undefined) ??
+    (raw.details as string | undefined);
+
+  const name = nameCandidate?.toString().trim();
+  if (!name || name.length === 0) {
+    return null;
+  }
+
+  const priceNumber = Number.parseFloat(String(priceCandidate ?? "0"));
+  const price = Number.isFinite(priceNumber) ? priceNumber : 0;
+
+  const idSource =
+    (raw.id as string | number | undefined) ??
+    (raw.key as string | number | undefined);
+
+  const id =
+    idSource !== undefined
+      ? String(idSource)
+      : slugifyLabel(name, `addon-${index}`);
+
+  return {
+    id,
+    name,
+    price,
+    description: descriptionCandidate?.toString().trim() || undefined,
+  };
+}
+
+function parseAddonOption(raw: unknown, index: number): GiftAddonOption | null {
+  if (!raw) {
+    return null;
+  }
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed.length) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      return normalizeAddonOption(parsed, index);
+    } catch (error) {
+      const [namePart, pricePart, descriptionPart] = trimmed
+        .split("|")
+        .map((segment) => segment.trim());
+
+      if (!namePart) {
+        return null;
+      }
+
+      const priceNumber = Number.parseFloat(pricePart ?? "0");
+      const price = Number.isFinite(priceNumber) ? priceNumber : 0;
+
+      return {
+        id: slugifyLabel(namePart, `addon-${index}`),
+        name: namePart,
+        price,
+        description: descriptionPart?.length ? descriptionPart : undefined,
+      };
+    }
+  }
+
+  if (typeof raw === "object") {
+    return normalizeAddonOption(raw as Record<string, unknown>, index);
+  }
+
+  return null;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -179,6 +278,14 @@ function requireAdminToken(token: string | null | undefined): string {
   return token;
 }
 
+function requireAuthToken(token: string | null | undefined): string {
+  if (!token) {
+    throw new Error("Authentication required");
+  }
+
+  return token;
+}
+
 function mapGift(apiGift: any): Gift {
   const imageRecords: GiftImageRecord[] = Array.isArray(apiGift.images)
     ? apiGift.images
@@ -263,22 +370,116 @@ function mapGift(apiGift: any): Gift {
     apiGift.reviewsCount ??
     (Array.isArray(apiGift.reviews) ? apiGift.reviews.length : 0);
 
-  let addonsOptions: string[] = [];
+  const addonSources: unknown[] = [];
+  const addonOptionStrings: string[] = [];
+  const seenAddonStrings = new Set<string>();
+
+  const addStringOption = (value: string, includeInSources = true) => {
+    const trimmed = value.trim();
+    if (!trimmed.length) {
+      return;
+    }
+
+    if (!seenAddonStrings.has(trimmed)) {
+      addonOptionStrings.push(trimmed);
+      seenAddonStrings.add(trimmed);
+    }
+
+    if (includeInSources) {
+      addonSources.push(trimmed);
+    }
+  };
+
+  const addObjectOption = (value: Record<string, unknown>) => {
+    addonSources.push(value);
+    const normalized = normalizeAddonOption(value, addonSources.length - 1);
+    if (!normalized) {
+      return;
+    }
+
+    const serialized =
+      normalized.description && normalized.description.length
+        ? `${normalized.name}|${normalized.price}|${normalized.description}`
+        : `${normalized.name}|${normalized.price}`;
+
+    addStringOption(serialized, false);
+  };
+
+  const processAddonEntry = (entry: unknown) => {
+    if (!entry) {
+      return;
+    }
+
+    if (typeof entry === "string") {
+      addStringOption(entry);
+      return;
+    }
+
+    if (Array.isArray(entry)) {
+      entry.forEach((item) => processAddonEntry(item));
+      return;
+    }
+
+    if (typeof entry === "object") {
+      addObjectOption(entry as Record<string, unknown>);
+      return;
+    }
+  };
+
   if (Array.isArray(apiGift.addonsOptions)) {
-    addonsOptions = apiGift.addonsOptions;
+    apiGift.addonsOptions.forEach((entry: unknown) => processAddonEntry(entry));
   } else if (
     typeof apiGift.addonsOptions === "string" &&
     apiGift.addonsOptions.trim().length
   ) {
-    try {
-      const parsed = JSON.parse(apiGift.addonsOptions);
-      if (Array.isArray(parsed)) {
-        addonsOptions = parsed;
+    const raw = apiGift.addonsOptions.trim();
+    let parsed = false;
+
+    if (raw.startsWith("[") || raw.startsWith("{")) {
+      try {
+        const json = JSON.parse(raw);
+        processAddonEntry(json);
+        parsed = true;
+      } catch (error) {
+        console.warn("Failed to parse addons options JSON", error);
       }
-    } catch (error) {
-      console.warn("Failed to parse addons options", error);
+    }
+
+    if (!parsed) {
+      raw
+        .split(/[\n,]/)
+        .forEach((segment: string) => processAddonEntry(segment));
     }
   }
+
+  if (Array.isArray(apiGift.addons)) {
+    apiGift.addons.forEach((entry: unknown) => processAddonEntry(entry));
+  }
+
+  const parsedAddons = addonSources
+    .map((entry, index) => parseAddonOption(entry, index))
+    .filter((entry): entry is GiftAddonOption => Boolean(entry));
+
+  const addonsMap = new Map<string, GiftAddonOption>();
+  parsedAddons.forEach((addon) => {
+    if (!addonsMap.has(addon.id)) {
+      addonsMap.set(addon.id, addon);
+    }
+  });
+
+  const addons = Array.from(addonsMap.values());
+
+  const addonsOptions = addonOptionStrings.length
+    ? addonOptionStrings
+    : Array.from(
+        new Set(
+          addons.map((addon) =>
+            addon.description && addon.description.length
+              ? `${addon.name}|${addon.price}|${addon.description}`
+              : `${addon.name}|${addon.price}`
+          )
+        )
+      );
 
   const stockCandidate =
     apiGift.stock ?? apiGift.inventory ?? apiGift.quantity ?? undefined;
@@ -308,8 +509,8 @@ function mapGift(apiGift: any): Gift {
     description: apiGift.description ?? "",
     tags: Array.isArray(apiGift.tags)
       ? apiGift.tags
-      : Array.isArray(apiGift.addonsOptions)
-      ? apiGift.addonsOptions
+      : addons.length > 0
+      ? addons.map((addon) => addon.name)
       : Array.isArray(apiGift.labels)
       ? apiGift.labels
       : addonsOptions,
@@ -332,7 +533,7 @@ function mapGift(apiGift: any): Gift {
     allowAddons:
       apiGift.allowAddons !== undefined
         ? Boolean(apiGift.allowAddons)
-        : addonsOptions.length > 0
+        : addons.length > 0 || addonsOptions.length > 0
         ? true
         : undefined,
     allowImageUpload:
@@ -342,6 +543,7 @@ function mapGift(apiGift: any): Gift {
         ? Boolean(apiGift.imageUploadAllowed)
         : undefined,
     addonsOptions,
+    addons,
     featured:
       apiGift.featured !== undefined
         ? Boolean(apiGift.featured)
@@ -389,6 +591,10 @@ function mapOrder(apiOrder: any): Order {
     ).toLowerCase() as Order["status"],
     total: Number(apiOrder.total ?? 0),
     createdAt: apiOrder.createdAt,
+    paymentMethod:
+      String(apiOrder.paymentMethod ?? "cod").toLowerCase() === "stripe"
+        ? "stripe"
+        : "cod",
     shippingAddress: {
       fullName:
         apiOrder.address?.fullName ??
@@ -679,6 +885,51 @@ export interface GiftWritePayload {
   featured: boolean;
 }
 
+export interface CheckoutOrderAddonPayload {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface CheckoutOrderItemPayload {
+  giftId: string;
+  giftName?: string;
+  image?: string;
+  quantity: number;
+  unitPrice: number;
+  basePrice?: number;
+  addons?: CheckoutOrderAddonPayload[];
+  personalMessage?: string;
+  giftWrapPrice?: number;
+  artworkUrl?: string;
+}
+
+export interface CheckoutOrderShippingPayload {
+  fullName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country?: string;
+}
+
+export interface CheckoutOrderTotalsPayload {
+  subtotal?: number;
+  tax?: number;
+  deliveryCharge?: number;
+  total?: number;
+}
+
+export interface CheckoutOrderPayload {
+  items: CheckoutOrderItemPayload[];
+  shipping: CheckoutOrderShippingPayload;
+  totals?: CheckoutOrderTotalsPayload;
+  note?: string;
+  paymentMethod: "stripe" | "cod";
+}
+
 function buildGiftFormData(
   payload: GiftWritePayload,
   images: File[]
@@ -758,6 +1009,31 @@ export async function updateGift(
 
   const result = await response.json();
   return mapGift(result);
+}
+
+export async function createDirectOrder(
+  payload: CheckoutOrderPayload,
+  token: string | null
+): Promise<Order> {
+  ensureApiBaseConfigured();
+  const authToken = requireAuthToken(token);
+
+  const response = await fetch(`${API_BASE}/orders/direct`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await parseApiError(response, "Failed to place order");
+  }
+
+  const order = await response.json();
+  return mapOrder(order);
 }
 
 export async function deleteGift(

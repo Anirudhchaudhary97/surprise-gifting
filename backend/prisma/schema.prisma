@@ -23,6 +23,11 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentMethod {
+  STRIPE
+  COD
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -55,26 +60,26 @@ model Category {
 }
 
 model Gift {
-  id                  String   @id @default(cuid())
-  name                String
-  description         String
-  price               Float
-  stock               Int      @default(0)
-  categoryId          String
-  isCustomizable      Boolean  @default(false)
-  allowPersonalMsg    Boolean  @default(true)
-  allowAddons         Boolean  @default(true)
-  allowImageUpload    Boolean  @default(false)
-  addonsOptions       String[] // JSON array of addon options
-  featured            Boolean  @default(false)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  description      String
+  price            Float
+  stock            Int      @default(0)
+  categoryId       String
+  isCustomizable   Boolean  @default(false)
+  allowPersonalMsg Boolean  @default(true)
+  allowAddons      Boolean  @default(true)
+  allowImageUpload Boolean  @default(false)
+  addonsOptions    String[] // JSON array of addon options
+  featured         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  category    Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  images      GiftImage[]
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  reviews     Review[]
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  images     GiftImage[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
 
   @@index([categoryId])
   @@index([featured])
@@ -85,7 +90,7 @@ model GiftImage {
   id        String   @id @default(cuid())
   giftId    String
   url       String
-  publicId  String   // Cloudinary public ID for deletion
+  publicId  String // Cloudinary public ID for deletion
   isPrimary Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -99,7 +104,7 @@ model Review {
   id        String   @id @default(cuid())
   userId    String
   giftId    String
-  rating    Int      // 1-5
+  rating    Int // 1-5
   comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -125,17 +130,17 @@ model Cart {
 }
 
 model CartItem {
-  id               String   @id @default(cuid())
-  cartId           String
-  giftId           String
-  quantity         Int      @default(1)
-  personalMessage  String?
-  selectedAddons   String[] // JSON array of selected addons
-  deliveryDate     DateTime?
-  customImageUrl   String?  // Cloudinary URL if user uploads image
-  customImageId    String?  // Cloudinary public ID
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String    @id @default(cuid())
+  cartId          String
+  giftId          String
+  quantity        Int       @default(1)
+  personalMessage String?
+  selectedAddons  String[] // JSON array of selected addons
+  deliveryDate    DateTime?
+  customImageUrl  String? // Cloudinary URL if user uploads image
+  customImageId   String? // Cloudinary public ID
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
   gift Gift @relation(fields: [giftId], references: [id], onDelete: Cascade)
@@ -146,18 +151,19 @@ model CartItem {
 }
 
 model Order {
-  id              String      @id @default(cuid())
+  id              String        @id @default(cuid())
   userId          String
   addressId       String
-  status          OrderStatus @default(PENDING)
+  status          OrderStatus   @default(PENDING)
   subtotal        Float
-  tax             Float       @default(0)
-  deliveryCharge  Float       @default(0)
+  tax             Float         @default(0)
+  deliveryCharge  Float         @default(0)
   total           Float
-  paymentIntentId String?     // Stripe payment intent ID
-  paymentStatus   String      @default("pending")
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  paymentIntentId String? // Stripe payment intent ID
+  paymentStatus   String        @default("pending")
+  paymentMethod   PaymentMethod @default(COD)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   address Address     @relation(fields: [addressId], references: [id])
@@ -169,16 +175,16 @@ model Order {
 }
 
 model OrderItem {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   orderId         String
   giftId          String
   quantity        Int
-  price           Float    // Price at time of order
+  price           Float // Price at time of order
   personalMessage String?
   selectedAddons  String[] // JSON array
   deliveryDate    DateTime?
   customImageUrl  String?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   gift  Gift  @relation(fields: [giftId], references: [id])
