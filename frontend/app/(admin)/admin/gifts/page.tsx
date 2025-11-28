@@ -248,6 +248,7 @@ export default function AdminGiftsPage() {
                     onEdit={handleOpenEdit}
                     onDelete={handleDeleteGift}
                     emptyState="No gifts configured yet."
+                    searchKey="name"
                 />
             )}
 
