@@ -7,6 +7,7 @@ import {
 import {
   type Category,
   type Gift,
+  type GiftImageRecord,
   type Order,
   type Review,
   type User,
@@ -179,9 +180,9 @@ function requireAdminToken(token: string | null | undefined): string {
 }
 
 function mapGift(apiGift: any): Gift {
-  const imageRecords = Array.isArray(apiGift.images)
+  const imageRecords: GiftImageRecord[] = Array.isArray(apiGift.images)
     ? apiGift.images
-        .map((image: any) => {
+        .map((image: any): GiftImageRecord | null => {
           const source = coerceImageValue(image);
           if (!source) {
             return null;
@@ -206,11 +207,8 @@ function mapGift(apiGift: any): Gift {
                 : false,
           };
         })
-        .filter(
-          (
-            record
-          ): record is { id?: string; url: string; isPrimary?: boolean } =>
-            Boolean(record)
+        .filter((record: GiftImageRecord | null): record is GiftImageRecord =>
+          Boolean(record)
         )
     : [];
 

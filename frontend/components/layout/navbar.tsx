@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { LogOut, Menu, ShoppingBag, ShoppingCart, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cartStorePersist, useCartStore } from "@/stores/cart-store";
+import { hasCartStoreHydrated, useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ export function Navbar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const cartCount = useCartStore((state) => state.count());
-    const hasHydrated = cartStorePersist.hasHydrated();
+    const hasHydrated = hasCartStoreHydrated();
     const router = useRouter();
     const user = useAuthStore((state) => state.user);
     const isAdmin = useAuthStore((state) => state.isAdmin);

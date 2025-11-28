@@ -53,11 +53,27 @@ export const useCartStore = create<CartState>()(
   )
 );
 
-type CartStoreWithPersist = typeof useCartStore & {
-  persist: {
-    rehydrate: () => Promise<void>;
-    hasHydrated: () => boolean;
-  };
+type CartStorePersistApi = {
+  rehydrate?: () => Promise<void>;
+  hasHydrated?: () => boolean;
+  onFinishHydration?: (callback: () => void) => () => void;
 };
 
-export const cartStorePersist = (useCartStore as CartStoreWithPersist).persist;
+function getCartPersist(): CartStorePersistApi | undefined {
+  return (useCartStore as unknown as { persist?: CartStorePersistApi }).persist;
+}
+
+export function rehydrateCartStore() {
+  return getCartPersist()?.rehydrate?.() ?? Promise.resolve();
+}
+
+export function hasCartStoreHydrated() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return getCartPersist()?.hasHydrated?.() ?? false;
+}
+
+export function subscribeToCartHydration(callback: () => void) {
+  return getCartPersist()?.onFinishHydration?.(callback) ?? (() => undefined);
+}
