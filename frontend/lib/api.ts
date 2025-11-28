@@ -289,34 +289,34 @@ function requireAuthToken(token: string | null | undefined): string {
 function mapGift(apiGift: any): Gift {
   const imageRecords: GiftImageRecord[] = Array.isArray(apiGift.images)
     ? apiGift.images
-        .map((image: any): GiftImageRecord | null => {
-          const source = coerceImageValue(image);
-          if (!source) {
-            return null;
-          }
+      .map((image: any): GiftImageRecord | null => {
+        const source = coerceImageValue(image);
+        if (!source) {
+          return null;
+        }
 
-          const idCandidate =
+        const idCandidate =
+          typeof image === "object" && image
+            ? image.id ?? image.imageId ?? image._id
+            : undefined;
+
+        return {
+          id: idCandidate ? String(idCandidate) : undefined,
+          url: normalizeRemoteImage(source),
+          isPrimary:
             typeof image === "object" && image
-              ? image.id ?? image.imageId ?? image._id
-              : undefined;
-
-          return {
-            id: idCandidate ? String(idCandidate) : undefined,
-            url: normalizeRemoteImage(source),
-            isPrimary:
-              typeof image === "object" && image
-                ? Boolean(
-                    image.isPrimary ??
-                      image.primary ??
-                      image.is_primary ??
-                      image.default
-                  )
-                : false,
-          };
-        })
-        .filter((record: GiftImageRecord | null): record is GiftImageRecord =>
-          Boolean(record)
-        )
+              ? Boolean(
+                image.isPrimary ??
+                image.primary ??
+                image.is_primary ??
+                image.default
+              )
+              : false,
+        };
+      })
+      .filter((record: GiftImageRecord | null): record is GiftImageRecord =>
+        Boolean(record)
+      )
     : [];
 
   if (imageRecords.length) {
@@ -354,14 +354,14 @@ function mapGift(apiGift: any): Gift {
     imageRecords.length > 0
       ? imageRecords
       : primaryCandidate
-      ? [
+        ? [
           {
             id: undefined,
             url: normalizedPrimary,
             isPrimary: true,
           },
         ]
-      : undefined;
+        : undefined;
 
   const ratingSource =
     apiGift.averageRating ?? apiGift.rating ?? apiGift.reviews?.average ?? 0;
@@ -472,14 +472,14 @@ function mapGift(apiGift: any): Gift {
   const addonsOptions = addonOptionStrings.length
     ? addonOptionStrings
     : Array.from(
-        new Set(
-          addons.map((addon) =>
-            addon.description && addon.description.length
-              ? `${addon.name}|${addon.price}|${addon.description}`
-              : `${addon.name}|${addon.price}`
-          )
+      new Set(
+        addons.map((addon) =>
+          addon.description && addon.description.length
+            ? `${addon.name}|${addon.price}|${addon.description}`
+            : `${addon.name}|${addon.price}`
         )
-      );
+      )
+    );
 
   const stockCandidate =
     apiGift.stock ?? apiGift.inventory ?? apiGift.quantity ?? undefined;
@@ -510,10 +510,10 @@ function mapGift(apiGift: any): Gift {
     tags: Array.isArray(apiGift.tags)
       ? apiGift.tags
       : addons.length > 0
-      ? addons.map((addon) => addon.name)
-      : Array.isArray(apiGift.labels)
-      ? apiGift.labels
-      : addonsOptions,
+        ? addons.map((addon) => addon.name)
+        : Array.isArray(apiGift.labels)
+          ? apiGift.labels
+          : addonsOptions,
     stock:
       stockCandidate !== undefined && stockCandidate !== null
         ? Number(stockCandidate)
@@ -522,34 +522,34 @@ function mapGift(apiGift: any): Gift {
       apiGift.isCustomizable !== undefined
         ? Boolean(apiGift.isCustomizable)
         : apiGift.customizable !== undefined
-        ? Boolean(apiGift.customizable)
-        : undefined,
+          ? Boolean(apiGift.customizable)
+          : undefined,
     allowPersonalMsg:
       apiGift.allowPersonalMsg !== undefined
         ? Boolean(apiGift.allowPersonalMsg)
         : apiGift.personalMessageAllowed !== undefined
-        ? Boolean(apiGift.personalMessageAllowed)
-        : undefined,
+          ? Boolean(apiGift.personalMessageAllowed)
+          : undefined,
     allowAddons:
       apiGift.allowAddons !== undefined
         ? Boolean(apiGift.allowAddons)
         : addons.length > 0 || addonsOptions.length > 0
-        ? true
-        : undefined,
+          ? true
+          : undefined,
     allowImageUpload:
       apiGift.allowImageUpload !== undefined
         ? Boolean(apiGift.allowImageUpload)
         : apiGift.imageUploadAllowed !== undefined
-        ? Boolean(apiGift.imageUploadAllowed)
-        : undefined,
+          ? Boolean(apiGift.imageUploadAllowed)
+          : undefined,
     addonsOptions,
     addons,
     featured:
       apiGift.featured !== undefined
         ? Boolean(apiGift.featured)
         : apiGift.isFeatured !== undefined
-        ? Boolean(apiGift.isFeatured)
-        : undefined,
+          ? Boolean(apiGift.isFeatured)
+          : undefined,
   };
 }
 
@@ -560,9 +560,9 @@ function mapCategory(apiCategory: any): Category {
     slug: apiCategory.slug,
     image: normalizeRemoteImage(
       coerceImageValue(apiCategory.imageUrl) ??
-        coerceImageValue(apiCategory.image) ??
-        coerceImageValue(apiCategory.coverImage) ??
-        PLACEHOLDER_IMAGE
+      coerceImageValue(apiCategory.image) ??
+      coerceImageValue(apiCategory.coverImage) ??
+      PLACEHOLDER_IMAGE
     ),
     description: apiCategory.description ?? "",
   };
@@ -620,7 +620,7 @@ function mapOrder(apiOrder: any): Order {
           : undefined) ??
         (item.gift
           ? coerceImageValue(item.gift.images?.[0]) ??
-            coerceImageValue(item.gift.imageUrl)
+          coerceImageValue(item.gift.imageUrl)
           : undefined);
 
       return {
@@ -700,13 +700,66 @@ export async function getFeaturedGifts(): Promise<Gift[]> {
   return gifts.map(mapGift).slice(0, 3);
 }
 
-export async function getGifts(): Promise<Gift[]> {
-  const response = await fetchFromApi("/gifts", () => giftsMock);
+export interface GetGiftsFilters {
+  categoryId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  search?: string;
+  featured?: boolean;
+  sortBy?: "newest" | "price_asc" | "price_desc";
+  page?: number;
+  limit?: number;
+}
+
+export interface GetGiftsResponse {
+  gifts: Gift[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export async function getGifts(filters?: GetGiftsFilters): Promise<GetGiftsResponse> {
+  const query: Record<string, string | number | boolean | undefined> = {};
+
+  if (filters) {
+    if (filters.categoryId) query.categoryId = filters.categoryId;
+    if (filters.minPrice) query.minPrice = filters.minPrice;
+    if (filters.maxPrice) query.maxPrice = filters.maxPrice;
+    if (filters.search) query.search = filters.search;
+    if (filters.featured !== undefined) query.featured = filters.featured;
+    if (filters.sortBy) query.sortBy = filters.sortBy;
+    if (filters.page) query.page = filters.page;
+    if (filters.limit) query.limit = filters.limit;
+  }
+
+  const response = await fetchFromApi("/gifts", () => ({ gifts: giftsMock, pagination: { page: 1, limit: 12, total: giftsMock.length, totalPages: 1 } }), { query });
+
+  // Backend returns { gifts, pagination }
+  if ((response as any).gifts && (response as any).pagination) {
+    return {
+      gifts: (response as any).gifts.map(mapGift),
+      pagination: (response as any).pagination,
+    };
+  }
+
+  // Fallback for mock data
   const gifts = Array.isArray((response as any).gifts)
     ? (response as any).gifts
     : response;
-  return gifts.map(mapGift);
+  return {
+    gifts: gifts.map(mapGift),
+    pagination: {
+      page: 1,
+      limit: gifts.length,
+      total: gifts.length,
+      totalPages: 1,
+    },
+  };
 }
+
 
 export async function getGiftById(id: string): Promise<Gift | undefined> {
   const fallback = giftsMock.find((gift) => gift.id === id || gift.slug === id);

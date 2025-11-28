@@ -15,8 +15,8 @@ export default function AdminOverviewPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        Promise.all([getGifts(), getOrders(), getCategories()]).then(([giftsData, ordersData, categoriesData]) => {
-            setGifts(giftsData);
+        Promise.all([getGifts(), getOrders(), getCategories()]).then(([giftsResponse, ordersData, categoriesData]) => {
+            setGifts(giftsResponse.gifts);
             setOrders(ordersData);
             setCategories(categoriesData);
             setLoading(false);

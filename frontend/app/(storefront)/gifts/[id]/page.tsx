@@ -17,8 +17,8 @@ export const dynamicParams = true;
 // Optional: Pre-generate static pages for better performance
 export async function generateStaticParams() {
     try {
-        const gifts = await getGifts();
-        return gifts.map((gift) => ({
+        const response = await getGifts();
+        return response.gifts.map((gift) => ({
             id: gift.slug ?? gift.id,
         }));
     } catch (error) {
@@ -35,8 +35,8 @@ export default async function GiftDetailPage({ params }: GiftDetailPageProps) {
         notFound();
     }
 
-    const [reviews, gifts] = await Promise.all([getGiftReviews(gift.id), getGifts()]);
-    const relatedGifts = gifts.filter((item) => item.id !== gift.id && item.categoryId === gift.categoryId).slice(0, 3);
+    const [reviews, giftsResponse] = await Promise.all([getGiftReviews(gift.id), getGifts()]);
+    const relatedGifts = giftsResponse.gifts.filter((item) => item.id !== gift.id && item.categoryId === gift.categoryId).slice(0, 3);
 
     return (
         <div className="space-y-16">

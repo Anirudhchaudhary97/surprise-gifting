@@ -11,6 +11,7 @@ export class GiftService {
         featured?: boolean;
         page?: number;
         limit?: number;
+        sortBy?: 'newest' | 'price_asc' | 'price_desc';
     }) {
         const page = filters?.page || 1;
         const limit = filters?.limit || 12;
@@ -39,6 +40,22 @@ export class GiftService {
             where.featured = filters.featured;
         }
 
+        const sortBy = filters?.sortBy || 'newest';
+        const orderBy: any = {};
+
+        switch (sortBy) {
+            case 'price_asc':
+                orderBy.price = 'asc';
+                break;
+            case 'price_desc':
+                orderBy.price = 'desc';
+                break;
+            case 'newest':
+            default:
+                orderBy.createdAt = 'desc';
+                break;
+        }
+
         const [gifts, total] = await Promise.all([
             prisma.gift.findMany({
                 where,
@@ -54,7 +71,7 @@ export class GiftService {
                 },
                 skip,
                 take: limit,
-                orderBy: { createdAt: 'desc' },
+                orderBy,
             }),
             prisma.gift.count({ where }),
         ]);
