@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GiftCard } from "@/components/gifts/gift-card";
-import { AddToCartButton } from "@/components/gifts/add-to-cart-button";
+import { GiftOrderPanel } from "@/components/gifts/gift-order-panel";
 import { ProductGallery } from "@/components/gifts/product-gallery";
 import { RatingStar } from "@/components/common/rating-star";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
 import { getGiftById, getGiftReviews, getGifts } from "@/lib/api";
 
 interface GiftDetailPageProps {
@@ -18,8 +17,8 @@ export const dynamicParams = true;
 // Optional: Pre-generate static pages for better performance
 export async function generateStaticParams() {
     try {
-        const gifts = await getGifts();
-        return gifts.map((gift) => ({
+        const response = await getGifts();
+        return response.gifts.map((gift) => ({
             id: gift.slug ?? gift.id,
         }));
     } catch (error) {
@@ -36,8 +35,8 @@ export default async function GiftDetailPage({ params }: GiftDetailPageProps) {
         notFound();
     }
 
-    const [reviews, gifts] = await Promise.all([getGiftReviews(gift.id), getGifts()]);
-    const relatedGifts = gifts.filter((item) => item.id !== gift.id && item.categoryId === gift.categoryId).slice(0, 3);
+    const [reviews, giftsResponse] = await Promise.all([getGiftReviews(gift.id), getGifts()]);
+    const relatedGifts = giftsResponse.gifts.filter((item) => item.id !== gift.id && item.categoryId === gift.categoryId).slice(0, 3);
 
     return (
         <div className="space-y-16">
@@ -50,16 +49,7 @@ export default async function GiftDetailPage({ params }: GiftDetailPageProps) {
                         <RatingStar value={gift.rating} reviewsCount={gift.reviewsCount} />
                     </div>
                     <p className="text-lg text-muted-foreground">{gift.shortDescription}</p>
-                    <div className="rounded-2xl border border-border bg-muted/40 p-6">
-                        <p className="text-3xl font-semibold">{formatCurrency(gift.price)}</p>
-                        <p className="mt-2 text-sm text-muted-foreground">Inclusive of complimentary gift wrapping and delivery.</p>
-                        <div className="mt-6 flex flex-wrap gap-3">
-                            <AddToCartButton gift={gift} size="lg" className="flex-1 sm:w-48" />
-                            <Button variant="outline" size="lg" className="flex-1 sm:w-48">
-                                Schedule delivery
-                            </Button>
-                        </div>
-                    </div>
+                    <GiftOrderPanel gift={gift} />
                     <div className="space-y-3">
                         <h2 className="text-xl font-semibold">What&apos;s inside</h2>
                         <p className="text-sm leading-relaxed text-muted-foreground">{gift.description}</p>

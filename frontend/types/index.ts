@@ -27,12 +27,20 @@ export interface Gift {
   addonsOptions?: string[];
   featured?: boolean;
   imageRecords?: GiftImageRecord[];
+  addons?: GiftAddonOption[];
 }
 
 export interface GiftImageRecord {
   id?: string;
   url: string;
   isPrimary?: boolean;
+}
+
+export interface GiftAddonOption {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
 }
 
 export interface Review {
@@ -67,6 +75,7 @@ export interface Order {
   status: OrderStatus;
   total: number;
   createdAt: string;
+  paymentMethod: "stripe" | "cod";
   items: OrderItem[];
   shippingAddress: {
     fullName: string;
@@ -81,10 +90,32 @@ export interface Order {
 
 export interface CartItem {
   id: string;
+  giftId: string;
+  name: string;
+  image: string;
+  basePrice: number;
+  price: number;
+  quantity: number;
+  addons?: CartAddonSelection[];
+  personalization?: CartPersonalization;
+}
+
+export interface CartAddonSelection {
+  id: string;
   name: string;
   price: number;
-  image: string;
-  quantity: number;
+}
+
+export interface CartPersonalization {
+  message?: string;
+  giftWrap?: {
+    enabled: boolean;
+    price: number;
+  };
+  artwork?: {
+    previewUrl: string;
+    fileName?: string;
+  };
 }
 
 export interface User {

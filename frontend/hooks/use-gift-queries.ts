@@ -23,7 +23,13 @@ export function useFeaturedGiftsQuery() {
 }
 
 export function useGiftsQuery() {
-  return useQuery({ queryKey: ["gifts", "all"], queryFn: getGifts });
+  return useQuery({
+    queryKey: ["gifts", "all"],
+    queryFn: async () => {
+      const response = await getGifts();
+      return response.gifts;
+    }
+  });
 }
 
 export function useGiftQuery(id: string | undefined) {

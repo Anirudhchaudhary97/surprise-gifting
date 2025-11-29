@@ -47,9 +47,12 @@ export default function AdminGiftsPage() {
     const [deletingGiftId, setDeletingGiftId] = useState<string | null>(null);
     const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
 
-    const { data: gifts = [], isLoading: giftsLoading } = useQuery({
+    const { data: giftsData, isLoading: giftsLoading } = useQuery({
         queryKey: ["gifts"],
-        queryFn: getGifts,
+        queryFn: async () => {
+            const response = await getGifts();
+            return response.gifts;
+        },
     });
 
     const { data: categories = [] } = useQuery({
@@ -198,7 +201,7 @@ export default function AdminGiftsPage() {
                 </div>
             ) : (
                 <AdminTable
-                    data={gifts}
+                    data={giftsData || []}
                     columns={[
                         {
                             key: "images",
@@ -248,6 +251,7 @@ export default function AdminGiftsPage() {
                     onEdit={handleOpenEdit}
                     onDelete={handleDeleteGift}
                     emptyState="No gifts configured yet."
+                    searchKey="name"
                 />
             )}
 

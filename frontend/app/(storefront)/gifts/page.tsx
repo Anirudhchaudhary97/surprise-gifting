@@ -1,51 +1,38 @@
-import Link from "next/link";
-import { Search } from "lucide-react";
+import { Suspense } from "react";
+import { FilterSidebar } from "@/components/storefront/filter-sidebar";
 import { GiftCard } from "@/components/gifts/gift-card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { getCategories, getGifts } from "@/lib/api";
+import { MobileFilterButton } from "@/components/storefront/mobile-filter-button";
+import { ActiveFilters } from "@/components/storefront/active-filters";
+import { Pagination } from "@/components/storefront/pagination";
+import { GiftGridSkeleton } from "@/components/storefront/gift-skeleton";
+import { getGifts } from "@/lib/api";
 
 interface GiftsPageProps {
-    searchParams?: Record<string, string | string[] | undefined>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function GiftsPage({ searchParams }: GiftsPageProps) {
-    const [gifts, categories] = await Promise.all([getGifts(), getCategories()]);
-
     const resolvedParams = await searchParams;
-    const selectedCategory = typeof resolvedParams?.category === "string" ? resolvedParams?.category : undefined;
-    const searchTerm = typeof resolvedParams?.search === "string" ? resolvedParams?.search : undefined;
 
-    const activeCategory = selectedCategory
-        ? categories.find(
-            (category) =>
-                category.slug === selectedCategory ||
-                category.id === selectedCategory ||
-                category.name.toLowerCase().replace(/\s+/g, "-") === selectedCategory,
-        )
-        : undefined;
+    const categoryId = typeof resolvedParams.categoryId === "string" ? resolvedParams.categoryId : undefined;
+    const minPrice = typeof resolvedParams.minPrice === "string" ? Number(resolvedParams.minPrice) : undefined;
+    const maxPrice = typeof resolvedParams.maxPrice === "string" ? Number(resolvedParams.maxPrice) : undefined;
+    const search = typeof resolvedParams.search === "string" ? resolvedParams.search : undefined;
+    const sortBy = typeof resolvedParams.sortBy === "string" ? (resolvedParams.sortBy as "newest" | "price_asc" | "price_desc") : undefined;
+    const page = typeof resolvedParams.page === "string" ? Number(resolvedParams.page) : 1;
 
-    const filteredGifts = gifts.filter((gift) => {
-        const matchesCategory = selectedCategory
-            ? gift.categoryId === activeCategory?.id ||
-            gift.slug === selectedCategory ||
-            gift.categoryName.toLowerCase().includes(selectedCategory.toLowerCase())
-            : true;
-        const matchesSearch = searchTerm
-            ? gift.name.toLowerCase().includes(searchTerm.toLowerCase()) || gift.shortDescription.toLowerCase().includes(searchTerm.toLowerCase())
-            : true;
-        return matchesCategory && matchesSearch;
+    const { gifts, pagination } = await getGifts({
+        categoryId,
+        minPrice,
+        maxPrice,
+        search,
+        sortBy,
+        page,
+        limit: 12,
     });
 
-    const activeCategories = categories.map((category) => ({
-        id: category.id,
-        label: category.name,
-        slug: category.slug,
-    }));
-
     return (
-        <div className="space-y-12">
+        <div className="space-y-8">
             <header className="space-y-4">
                 <h1 className="text-3xl font-bold tracking-tight">Discover curated gifts</h1>
                 <p className="max-w-2xl text-muted-foreground">
@@ -54,62 +41,41 @@ export default async function GiftsPage({ searchParams }: GiftsPageProps) {
                 </p>
             </header>
 
-            <div className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-6">
-                <form className="flex flex-col gap-4 md:flex-row" role="search">
-                    <div className="relative flex-1">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            name="search"
-                            defaultValue={searchTerm}
-                            placeholder="Search by name, keyword, or experience"
-                            className="pl-9"
-                        />
+            <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+                <aside className="hidden lg:block">
+                    <FilterSidebar />
+                </aside>
+
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between gap-4">
+                        <MobileFilterButton />
+                        <p className="text-sm text-muted-foreground">
+                            {pagination.total} {pagination.total === 1 ? "gift" : "gifts"} found
+                        </p>
                     </div>
-                    <Button type="submit">Apply filters</Button>
-                </form>
-                <div className="flex flex-wrap gap-3">
-                    <Link
-                        href="/gifts"
-                        className={cn(
-                            "rounded-full border px-4 py-2 text-sm font-medium",
-                            !selectedCategory
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border text-muted-foreground hover:text-foreground",
-                        )}
-                    >
-                        All
-                    </Link>
-                    {activeCategories.map((category) => (
-                        <Link
-                            key={category.id}
-                            href={`/gifts?category=${category.slug}`}
-                            className={cn(
-                                "rounded-full border px-4 py-2 text-sm font-medium",
-                                selectedCategory === category.slug
-                                    ? "border-primary bg-primary/10 text-primary"
-                                    : "border-border text-muted-foreground hover:text-foreground",
-                            )}
-                        >
-                            {category.label}
-                        </Link>
-                    ))}
+
+                    <ActiveFilters />
+
+                    <Suspense fallback={<GiftGridSkeleton count={12} />}>
+                        <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                            {gifts.map((gift) => (
+                                <GiftCard key={gift.id} gift={gift} />
+                            ))}
+                        </section>
+                    </Suspense>
+
+                    {gifts.length === 0 && (
+                        <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-10 text-center">
+                            <h2 className="text-xl font-semibold">No gifts found</h2>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Try adjusting your filters or explore another category.
+                            </p>
+                        </div>
+                    )}
+
+                    <Pagination currentPage={pagination.page} totalPages={pagination.totalPages} />
                 </div>
             </div>
-
-            <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {filteredGifts.map((gift) => (
-                    <GiftCard key={gift.id} gift={gift} />
-                ))}
-            </section>
-
-            {filteredGifts.length === 0 && (
-                <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-10 text-center">
-                    <h2 className="text-xl font-semibold">No gifts found</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                        Try adjusting your filters or explore another category.
-                    </p>
-                </div>
-            )}
         </div>
     );
 }

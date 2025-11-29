@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CartItem } from "@/components/cart/cart-item";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart-store";
 
 export default function CartPage() {
@@ -37,7 +38,7 @@ export default function CartPage() {
                         <div className="space-y-2 text-sm text-muted-foreground">
                             <div className="flex items-center justify-between">
                                 <span>Subtotal</span>
-                                <span>₹{total.toFixed(2)}</span>
+                                <span>{formatCurrency(total)}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span>Delivery</span>
@@ -46,7 +47,7 @@ export default function CartPage() {
                         </div>
                         <div className="flex items-center justify-between border-t border-border pt-4 text-base font-semibold">
                             <span>Total</span>
-                            <span>₹{total.toFixed(2)}</span>
+                            <span>{formatCurrency(total)}</span>
                         </div>
                         <div className="space-y-3">
                             <Button asChild size="lg" className="w-full">

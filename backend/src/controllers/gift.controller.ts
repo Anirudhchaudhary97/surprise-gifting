@@ -15,6 +15,7 @@ export class GiftController {
                 featured,
                 page,
                 limit,
+                sortBy,
             } = req.query;
 
             const filters = {
@@ -25,6 +26,7 @@ export class GiftController {
                 featured: featured === 'true' ? true : undefined,
                 page: page ? parseInt(page as string) : undefined,
                 limit: limit ? parseInt(limit as string) : undefined,
+                sortBy: sortBy as 'newest' | 'price_asc' | 'price_desc',
             };
 
             const result = await giftService.getAll(filters);
